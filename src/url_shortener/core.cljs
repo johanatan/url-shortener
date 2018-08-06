@@ -6,7 +6,7 @@
 (enable-console-print!)
 
 (defonce app-state
-  (reagent/atom {:error nil :input ""}))
+  (reagent/atom {:error nil :input "" :produced nil}))
 
 (def root (m/connect "https://url-shortener-b1779.firebaseio.com"))
 
@@ -18,23 +18,17 @@
   (swap! app-state assoc :error (when (not (is-url? (:input @app-state)))
                                   "input is not a valid url")))
 
-(defn str->buf [str]
-  (let [enc (js/window.TextEncoder.)
-        encoded (.encode enc str)]
-    (.-buffer encoded)))
-
-(defn buf->str [buf]
-  (let [dec (js/window.TextDecoder. "utf-16")
-        arr (js/Uint16Array. buf)]
-    (.decode dec arr)))
-
 (defn btn-clicked []
   (validate-input)
   (when (nil? (:error @app-state))
-    (let [prom (.digest js/window.crypto.subtle "SHA-256" (str->buf (:input @app-state)))]
-      (.then prom
-             (fn [val]
-               (js/console.log (buf->str val)))))))
+    (m/conj! (m/get-in root [:forward]) (:input @app-state)
+            (fn [res]
+              (let [id (last (.. res -path -u))]
+                (m/conj! (m/get-in root [:reverse])
+                         {:id id
+                          :path (:input @app-state)}
+                         (fn [_]
+                           (swap! app-state assoc :produced id))))))))
 
 (defn page []
   [:div
