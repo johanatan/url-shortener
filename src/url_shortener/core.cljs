@@ -38,7 +38,7 @@
       [:label (format "Error:  %s" (:error @app-state))]])
    [:div
     {:style {:margin-top "20px" :margin-left "20px"}}
-    [:label {:for "url-input"} "Enter the URL:"]
+    [:label {:style {:margin-right"10px"} :for "url-input"} "Enter the URL:"]
     [:input {:type "text" :on-input #(do (swap! app-state assoc :input (-> %1 .-target .-value))
                                          (validate-input))
              :style {:width "200px"}
