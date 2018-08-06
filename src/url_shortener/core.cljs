@@ -14,14 +14,26 @@
   (try (js/Boolean (js/URL. s))
        (catch js/Error e false)))
 
+(defn get-existing [url cb]
+  (let [query (m/equal-to (m/order-by-child (m/get-in root [:urls]) :url) url)
+        fname (fnil name "")]
+    (m/deref query #(cb (-> % keys first fname)))))
+
+(defn create-new [url]
+  (m/conj! (m/get-in root [:urls]) {:url url}
+           (fn [res] (swap! app-state assoc :produced (last (.. res -path -u))))))
+
 (defn validate-input []
   (swap! app-state assoc :error (when (not (is-url? (:input @app-state))) "input is not a valid url")))
 
 (defn btn-clicked []
   (validate-input)
   (when (nil? (:error @app-state))
-    (m/conj! (m/get-in root [:urls]) (:input @app-state)
-             (fn [res] (swap! app-state assoc :produced (last (.. res -path -u)))))))
+    (get-existing (:input @app-state)
+                  (fn [existing]
+                    (if (clojure.string/blank? existing)
+                      (create-new (:input @app-state))
+                      (swap! app-state assoc :produced existing))))))
 
 (defn page []
   (let [tl-div-style {:style {:margin-top "20px" :margin-left "20px"}}]
