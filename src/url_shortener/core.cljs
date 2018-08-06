@@ -21,7 +21,7 @@
   (validate-input)
   (when (nil? (:error @app-state))
     (m/conj! (m/get-in root [:urls]) (:input @app-state)
-            (fn [res] (swap! app-state assoc :produced (last (.. res -path -u)))))))
+             (fn [res] (swap! app-state assoc :produced (last (.. res -path -u)))))))
 
 (defn page []
   (let [tl-div-style {:style {:margin-top "20px" :margin-left "20px"}}]
