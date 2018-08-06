@@ -15,8 +15,7 @@
        (catch js/Error e false)))
 
 (defn validate-input []
-  (swap! app-state assoc :error (when (not (is-url? (:input @app-state)))
-                                  "input is not a valid url")))
+  (swap! app-state assoc :error (when (not (is-url? (:input @app-state))) "input is not a valid url")))
 
 (defn btn-clicked []
   (validate-input)
