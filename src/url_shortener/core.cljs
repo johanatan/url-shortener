@@ -20,14 +20,9 @@
 (defn btn-clicked []
   (validate-input)
   (when (nil? (:error @app-state))
-    (m/conj! (m/get-in root [:forward]) (:input @app-state)
+    (m/conj! (m/get-in root [:urls]) (:input @app-state)
             (fn [res]
-              (let [id (last (.. res -path -u))]
-                (m/conj! (m/get-in root [:reverse])
-                         {:id id
-                          :path (:input @app-state)}
-                         (fn [_]
-                           (swap! app-state assoc :produced id))))))))
+              (swap! app-state assoc :produced (last (.. res -path -u)))))))
 
 (defn page []
   (let [tl-div-style {:style {:margin-top "20px" :margin-left "20px"}}]
