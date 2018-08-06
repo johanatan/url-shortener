@@ -30,19 +30,28 @@
                            (swap! app-state assoc :produced id))))))))
 
 (defn page []
-  [:div
-   (when (not (clojure.string/blank? (:error @app-state)))
-     [:div
-      {:style {:background-color "red"
-               :width "380px"}}
-      [:label (format "Error:  %s" (:error @app-state))]])
-   [:div
-    {:style {:margin-top "20px" :margin-left "20px"}}
-    [:label {:style {:margin-right"10px"} :for "url-input"} "Enter the URL:"]
-    [:input {:type "text" :on-input #(do (swap! app-state assoc :input (-> %1 .-target .-value))
-                                         (validate-input))
-             :style {:width "200px"}
-             :id "url-input" :value (:input @app-state) :autoFocus true}]
-    [:button {:type "button" :on-click btn-clicked} "Shorten"]]])
+  (let [tl-div-style {:style {:margin-top "20px" :margin-left "20px"}}]
+    (cond
+      (not (nil? (:produced @app-state)))
+      (let [link (format "http://%s/%s" js/window.location.host (:produced @app-state))]
+        [:div
+         tl-div-style
+         [:label {:style {:margin-right "10px"}} "Here is your URL:"]
+         [:a {:href link} link]])
+      :else
+      [:div
+       (when (not (clojure.string/blank? (:error @app-state)))
+         [:div
+          {:style {:background-color "red"
+                   :width "380px"}}
+          [:label (format "Error:  %s" (:error @app-state))]])
+       [:div
+        tl-div-style
+        [:label {:style {:margin-right"10px"} :for "url-input"} "Enter the URL:"]
+        [:input {:type "text" :on-input #(do (swap! app-state assoc :input (-> %1 .-target .-value))
+                                             (validate-input))
+                 :style {:width "200px"}
+                 :id "url-input" :value (:input @app-state) :autoFocus true}]
+        [:button {:type "button" :on-click btn-clicked} "Shorten"]]])))
 
 (reagent/render-component [page] (.getElementById js/document "app"))
