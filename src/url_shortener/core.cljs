@@ -1,14 +1,30 @@
 (ns url-shortener.core
   (:require [matchbox.core :as m]
-            [reagent.core :as reagent])
-  (:import [goog.string format]))
+            [reagent.core :as reagent]
+            [goog.events :as events]
+            [goog.history.EventType :as EventType]
+            [secretary.core :as secretary :refer-macros [defroute]])
+  (:import [goog.string format]
+           goog.History))
 
 (enable-console-print!)
 
 (defonce app-state
-  (reagent/atom {:error nil :input "" :produced nil}))
+  (reagent/atom {:error nil :input "" :produced nil :retrieved nil}))
 
 (def root (m/connect "https://url-shortener-b1779.firebaseio.com"))
+
+(defroute "/:short-url" [short-url]
+  (swap! app-state assoc :retrieving true)
+  (let [query (.child (.child root "urls") short-url)]
+    (m/deref query #(swap! app-state assoc :retrieved (:url %)))))
+
+(defn hook-browser-navigation! []
+  (doto (History.)
+    (events/listen
+     EventType/NAVIGATE
+     (fn [event] (secretary/dispatch! (.-token event))))
+    (.setEnabled true)))
 
 (defn is-url? [s]
   (try (js/Boolean (js/URL. s))
@@ -35,29 +51,41 @@
                       (create-new (:input @app-state))
                       (swap! app-state assoc :produced existing))))))
 
-(defn page []
-  (let [tl-div-style {:style {:margin-top "20px" :margin-left "20px"}}]
-    (cond
-      (not (nil? (:produced @app-state)))
-      (let [link (format "http://%s/%s" js/window.location.host (:produced @app-state))]
-        [:div
-         tl-div-style
-         [:label {:style {:margin-right "10px"}} "Here is your URL:"]
-         [:a {:href link} link]])
-      :else
-      [:div
-       (when (not (clojure.string/blank? (:error @app-state)))
-         [:div
-          {:style {:background-color "red"
-                   :width "380px"}}
-          [:label (format "Error:  %s" (:error @app-state))]])
-       [:div
-        tl-div-style
-        [:label {:style {:margin-right"10px"} :for "url-input"} "Enter the URL:"]
-        [:input {:type "text" :on-input #(do (swap! app-state assoc :input (-> %1 .-target .-value))
-                                             (validate-input))
-                 :style {:width "200px"}
-                 :id "url-input" :value (:input @app-state) :autoFocus true}]
-        [:button {:type "button" :on-click btn-clicked} "Shorten"]]])))
+(def tl-div-style {:style {:margin-top "20px" :margin-left "20px"}})
 
-(reagent/render-component [page] (.getElementById js/document "app"))
+(defn link [link label]
+  [:div
+   tl-div-style
+   [:label {:style {:margin-right "10px"}} label]
+   [:a {:href link} link]])
+
+(defn page []
+  (cond
+    (not (nil? (:retrieved @app-state)))
+    [link (:retrieved @app-state) "Here is your retrieved URL:"]
+    (not (nil? (:retrieving @app-state))) nil ; display nothing while retrieval in process
+    (not (nil? (:produced @app-state)))
+    (let [lnk (format "http://%s%s#%s" js/location.host js/location.pathname (:produced @app-state))]
+      [link lnk "Here is your generated URL:"])
+    :else
+    [:div
+     (when (not (clojure.string/blank? (:error @app-state)))
+       [:div
+        {:style {:background-color "red"
+                 :width "380px"}}
+        [:label (format "Error:  %s" (:error @app-state))]])
+     [:div
+      tl-div-style
+      [:label {:style {:margin-right"10px"} :for "url-input"} "Enter the URL:"]
+      [:input {:type "text" :on-input #(do (swap! app-state assoc :input (-> %1 .-target .-value))
+                                           (validate-input))
+               :style {:width "200px"}
+               :id "url-input" :value (:input @app-state) :autoFocus true}]
+      [:button {:type "button" :on-click btn-clicked} "Shorten"]]]))
+
+(defn init! []
+  (secretary/set-config! :prefix "#")
+  (hook-browser-navigation!)
+  (reagent/render-component [page] (.getElementById js/document "app")))
+
+(init!)

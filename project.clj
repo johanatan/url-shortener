@@ -10,6 +10,7 @@
                  [org.clojure/clojurescript "1.10.238"]
                  [matchbox "0.0.9"]
                  [reagent "0.8.1"]
+                 [secretary "1.2.3"]
                  [org.clojure/core.async  "0.4.474"]]
 
   :plugins [[lein-figwheel "0.5.16"]
